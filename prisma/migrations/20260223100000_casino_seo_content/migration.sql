@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "casinos" ADD COLUMN IF NOT EXISTS "seoTitle" TEXT;
+ALTER TABLE "casinos" ADD COLUMN IF NOT EXISTS "seoDesc" TEXT;
+ALTER TABLE "casinos" ADD COLUMN IF NOT EXISTS "content" JSONB;

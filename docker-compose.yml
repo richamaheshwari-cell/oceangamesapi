@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: tog_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tiwarigaman
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: tog_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - tog_pgdata:/var/lib/postgresql/data
+
+volumes:
+  tog_pgdata:

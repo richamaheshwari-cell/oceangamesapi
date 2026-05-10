@@ -1,0 +1,448 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AdminRefreshToken {
+  id        String    @id @default(uuid())
+  adminId   String
+  tokenHash String    @unique
+  revokedAt DateTime?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  admin     AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("admin_refresh_tokens")
+}
+
+model AdminUser {
+  id                      String                    @id @default(uuid())
+  name                    String?
+  email                   String                    @unique
+  password                String
+  isActive                Boolean                   @default(true)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  isSystem                Boolean                   @default(false)
+  mustChangePassword      Boolean                   @default(false)
+  role                    AdminRole                 @default(admin)
+  bio                     String?
+  avatarUrl               String?
+  profilePublic           Boolean                   @default(true)
+  showEmailPublicly       Boolean                   @default(false)
+  lastLoginAt             DateTime?
+  createdById             String?
+  authorSlug              String?                   @unique
+  passwordResetTokens     AdminPasswordResetToken[]
+  refreshTokens           AdminRefreshToken[]
+  roleHistoryPerformed    AdminRoleHistory[]        @relation("RoleHistoryPerformedBy")
+  roleHistoryReassignedTo AdminRoleHistory[]        @relation("RoleHistoryReassignedTo")
+  roleHistoryTarget       AdminRoleHistory[]        @relation("RoleHistoryTarget")
+  createdBy               AdminUser?                @relation("AdminCreatedBy", fields: [createdById], references: [id])
+  createdAdmins           AdminUser[]               @relation("AdminCreatedBy")
+  blogsCreated            Blog[]                    @relation("BlogCreatedBy")
+  blogsUpdated            Blog[]                    @relation("BlogUpdatedBy")
+  bonusArticlesCreated    BonusArticle[]            @relation("BonusArticleCreatedBy")
+  bonusArticlesUpdated    BonusArticle[]            @relation("BonusArticleUpdatedBy")
+  bonusesCreated          Bonus[]                   @relation("BonusCreatedBy")
+  bonusesUpdated          Bonus[]                   @relation("BonusUpdatedBy")
+  casinoArticlesCreated   CasinoArticle[]           @relation("CasinoArticleCreatedBy")
+  casinoArticlesUpdated   CasinoArticle[]           @relation("CasinoArticleUpdatedBy")
+  casinosCreated          Casino[]                  @relation("CasinoCreatedBy")
+  casinosUpdated          Casino[]                  @relation("CasinoUpdatedBy")
+  gameArticlesCreated     GameArticle[]             @relation("GameArticleCreatedBy")
+  gameArticlesUpdated     GameArticle[]             @relation("GameArticleUpdatedBy")
+  gamesCreated            Game[]                    @relation("GameCreatedBy")
+  gamesUpdated            Game[]                    @relation("GameUpdatedBy")
+  newsCreated             News[]                    @relation("NewsCreatedBy")
+  newsUpdated             News[]                    @relation("NewsUpdatedBy")
+  pagesCreated            Page[]                    @relation("PageCreatedBy")
+  pagesUpdated            Page[]                    @relation("PageUpdatedBy")
+
+  @@map("admin_users")
+}
+
+model AdminRoleHistory {
+  id             String            @id @default(uuid())
+  performedById  String
+  targetUserId   String
+  action         RoleHistoryAction
+  previousRole   AdminRole?
+  newRole        AdminRole?
+  reassignedToId String?
+  createdAt      DateTime          @default(now())
+  performedBy    AdminUser         @relation("RoleHistoryPerformedBy", fields: [performedById], references: [id], onDelete: Cascade)
+  reassignedTo   AdminUser?        @relation("RoleHistoryReassignedTo", fields: [reassignedToId], references: [id])
+  targetUser     AdminUser         @relation("RoleHistoryTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([targetUserId])
+  @@index([performedById])
+  @@index([createdAt])
+  @@map("admin_role_history")
+}
+
+model AdminPasswordResetToken {
+  id        String    @id @default(uuid())
+  adminId   String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  admin     AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("admin_password_reset_tokens")
+}
+
+model NewsletterSubscription {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  subscribed     Boolean   @default(true)
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([email])
+  @@index([subscribed])
+  @@map("newsletter_subscriptions")
+}
+
+model Casino {
+  id           String        @id @default(uuid())
+  casinoName   String
+  slug         String        @unique
+  featureImg   String?
+  status       PublishStatus @default(draft)
+  reviewCount  Int           @default(0)
+  bonusAmt     String?
+  totalGames   Int           @default(0)
+  payoutSpeed  String?
+  clientLink   String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  rating       Float?
+  bonusDetails String[]      @default([])
+  tags         String[]      @default([])
+  createdById  String?
+  updatedById  String?
+  seoTitle     String?
+  seoDesc      String?
+  content      Json?
+  createdBy    AdminUser?    @relation("CasinoCreatedBy", fields: [createdById], references: [id])
+  updatedBy    AdminUser?    @relation("CasinoUpdatedBy", fields: [updatedById], references: [id])
+  games        GameCasino[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([createdById])
+  @@map("casinos")
+}
+
+model GameCasino {
+  gameId   String
+  casinoId String
+  casino   Casino @relation(fields: [casinoId], references: [id], onDelete: Cascade)
+  game     Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@id([gameId, casinoId])
+  @@index([casinoId])
+  @@map("game_casinos")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model CasinoArticle {
+  id                  String                   @id @default(uuid())
+  title               String
+  slug                String                   @unique
+  featureImg          String?
+  shortDesc           String
+  publishDate         DateTime
+  readTime            String
+  content             Json?
+  tags                String[]                 @default([])
+  gameSlugs           String[]                 @default([])
+  seoTitle            String?
+  seoDesc             String?
+  status              PublishStatus            @default(draft)
+  createdById         String?
+  updatedById         String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  focusKeywords       String[]                 @default([])
+  search_tsv          Unsupported("tsvector")? @default(dbgenerated("to_tsvector('english'::regconfig, ((((COALESCE(title, ''::text) || ' '::text) || COALESCE(\"shortDesc\", ''::text)) || ' '::text) || COALESCE((content)::text, ''::text)))"))
+  showInBlog          Boolean?                 @default(false)
+  showInGameArticle   Boolean?                 @default(false)
+  showInBonusArticle  Boolean?                 @default(false)
+  showInCasinoArticle Boolean?                 @default(false)
+  showInNews          Boolean?                 @default(false)
+  createdBy           AdminUser?               @relation("CasinoArticleCreatedBy", fields: [createdById], references: [id])
+  updatedBy           AdminUser?               @relation("CasinoArticleUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([status])
+  @@index([publishDate])
+  @@index([createdById])
+  @@map("casino_articles")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model Game {
+  id            String        @id @default(uuid())
+  title         String
+  slug          String        @unique
+  featureImg    String?
+  tag           String?
+  gameProvider  String[]      @default([])
+  gameDetails   String[]      @default([])
+  clientLink    String?
+  status        PublishStatus @default(draft)
+  createdById   String?
+  updatedById   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  seoTitle      String?
+  seoDesc       String?
+  focusKeywords String[]      @default([])
+  content       Json?
+  casinos       GameCasino[]
+  createdBy     AdminUser?    @relation("GameCreatedBy", fields: [createdById], references: [id])
+  updatedBy     AdminUser?    @relation("GameUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([status])
+  @@index([createdById])
+  @@map("games")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model GameArticle {
+  id                  String                   @id @default(uuid())
+  title               String
+  slug                String                   @unique
+  featureImg          String?
+  shortDesc           String
+  publishDate         DateTime
+  readTime            String
+  content             Json?
+  tags                String[]                 @default([])
+  gameSlugs           String[]                 @default([])
+  seoTitle            String?
+  seoDesc             String?
+  focusKeywords       String[]                 @default([])
+  status              PublishStatus            @default(draft)
+  createdById         String?
+  updatedById         String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  search_tsv          Unsupported("tsvector")? @default(dbgenerated("to_tsvector('english'::regconfig, ((((COALESCE(title, ''::text) || ' '::text) || COALESCE(\"shortDesc\", ''::text)) || ' '::text) || COALESCE((content)::text, ''::text)))"))
+  showInBlog          Boolean?                 @default(false)
+  showInGameArticle   Boolean?                 @default(false)
+  showInBonusArticle  Boolean?                 @default(false)
+  showInCasinoArticle Boolean?                 @default(false)
+  showInNews          Boolean?                 @default(false)
+  createdBy           AdminUser?               @relation("GameArticleCreatedBy", fields: [createdById], references: [id])
+  updatedBy           AdminUser?               @relation("GameArticleUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([status])
+  @@index([publishDate])
+  @@index([createdById])
+  @@map("game_articles")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model Blog {
+  id                  String                   @id @default(uuid())
+  title               String
+  slug                String                   @unique
+  featureImg          String?
+  shortDesc           String
+  publishDate         DateTime
+  readTime            String
+  content             Json?
+  tags                String[]                 @default([])
+  seoTitle            String?
+  seoDesc             String?
+  focusKeywords       String[]                 @default([])
+  isFeatured          Boolean                  @default(false)
+  status              PublishStatus            @default(draft)
+  createdById         String?
+  updatedById         String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  search_tsv          Unsupported("tsvector")? @default(dbgenerated("to_tsvector('english'::regconfig, ((((COALESCE(title, ''::text) || ' '::text) || COALESCE(\"shortDesc\", ''::text)) || ' '::text) || COALESCE((content)::text, ''::text)))"))
+  showInBlog          Boolean?                 @default(true)
+  showInGameArticle   Boolean?                 @default(false)
+  showInBonusArticle  Boolean?                 @default(false)
+  showInCasinoArticle Boolean?                 @default(false)
+  showInNews          Boolean?                 @default(false)
+  createdBy           AdminUser?               @relation("BlogCreatedBy", fields: [createdById], references: [id])
+  updatedBy           AdminUser?               @relation("BlogUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([status])
+  @@index([publishDate])
+  @@index([createdById])
+  @@index([isFeatured])
+  @@map("blogs")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model News {
+  id                  String                   @id @default(uuid())
+  title               String
+  slug                String                   @unique
+  featureImg          String?
+  shortDesc           String
+  publishDate         DateTime
+  readTime            String
+  content             Json?
+  tags                String[]                 @default([])
+  seoTitle            String?
+  seoDesc             String?
+  focusKeywords       String[]                 @default([])
+  isTrending          Boolean                  @default(false)
+  status              PublishStatus            @default(draft)
+  createdById         String?
+  updatedById         String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  search_tsv          Unsupported("tsvector")? @default(dbgenerated("to_tsvector('english'::regconfig, ((((COALESCE(title, ''::text) || ' '::text) || COALESCE(\"shortDesc\", ''::text)) || ' '::text) || COALESCE((content)::text, ''::text)))"))
+  showInBlog          Boolean?                 @default(false)
+  showInGameArticle   Boolean?                 @default(false)
+  showInBonusArticle  Boolean?                 @default(false)
+  showInCasinoArticle Boolean?                 @default(false)
+  showInNews          Boolean?                 @default(true)
+  createdBy           AdminUser?               @relation("NewsCreatedBy", fields: [createdById], references: [id])
+  updatedBy           AdminUser?               @relation("NewsUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([status])
+  @@index([publishDate])
+  @@index([createdById])
+  @@index([isTrending])
+  @@index([status, isTrending, publishDate(sort: Desc)])
+  @@map("news")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model Bonus {
+  id          String         @id @default(uuid())
+  title       String
+  slug        String         @unique
+  description String[]       @default([])
+  clientLink  String?
+  highlight   String
+  bonusType   String
+  iconKey     String
+  status      PublishStatus  @default(draft)
+  createdById String?
+  updatedById String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  featureImg  String?
+  articles    BonusArticle[]
+  createdBy   AdminUser?     @relation("BonusCreatedBy", fields: [createdById], references: [id])
+  updatedBy   AdminUser?     @relation("BonusUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([status])
+  @@index([createdById])
+  @@map("bonuses")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model BonusArticle {
+  id                  String                   @id @default(uuid())
+  title               String
+  slug                String                   @unique
+  featureImg          String?
+  shortDesc           String
+  publishDate         DateTime
+  readTime            String
+  content             Json?
+  tags                String[]                 @default([])
+  gameSlugs           String[]                 @default([])
+  seoTitle            String?
+  seoDesc             String?
+  focusKeywords       String[]                 @default([])
+  status              PublishStatus            @default(draft)
+  bonusId             String?
+  createdById         String?
+  updatedById         String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  search_tsv          Unsupported("tsvector")? @default(dbgenerated("to_tsvector('english'::regconfig, ((((COALESCE(title, ''::text) || ' '::text) || COALESCE(\"shortDesc\", ''::text)) || ' '::text) || COALESCE((content)::text, ''::text)))"))
+  showInBlog          Boolean?                 @default(false)
+  showInGameArticle   Boolean?                 @default(false)
+  showInBonusArticle  Boolean?                 @default(true)
+  showInCasinoArticle Boolean?                 @default(false)
+  showInNews          Boolean?                 @default(false)
+  bonus               Bonus?                   @relation(fields: [bonusId], references: [id])
+  createdBy           AdminUser?               @relation("BonusArticleCreatedBy", fields: [createdById], references: [id])
+  updatedBy           AdminUser?               @relation("BonusArticleUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([status])
+  @@index([publishDate])
+  @@index([bonusId])
+  @@index([createdById])
+  @@map("bonus_articles")
+}
+
+model SiteSetting {
+  id              Int      @id @default(1)
+  siteName        String   @default("TheOceanGames")
+  logoUrl         String?
+  faviconUrl      String?
+  primaryColor    String?
+  supportEmail    String?
+  socials         Json?
+  maintenanceMode Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model Page {
+  id          String                   @id @default(uuid())
+  slug        String                   @unique
+  title       String
+  contentHtml String
+  seoTitle    String?
+  seoDesc     String?
+  isPublished Boolean                  @default(true)
+  sortOrder   Int                      @default(0)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  createdById String?
+  updatedById String?
+  search_tsv  Unsupported("tsvector")? @default(dbgenerated("to_tsvector('english'::regconfig, ((COALESCE(title, ''::text) || ' '::text) || COALESCE(\"contentHtml\", ''::text)))"))
+  createdBy   AdminUser?               @relation("PageCreatedBy", fields: [createdById], references: [id])
+  updatedBy   AdminUser?               @relation("PageUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([createdById])
+  @@map("pages")
+}
+
+enum AdminRole {
+  super_admin
+  admin
+  editor
+  seo_editor
+}
+
+enum RoleHistoryAction {
+  assigned
+  role_updated
+  revoked
+}
+
+enum PublishStatus {
+  published
+  draft
+  pending
+}
