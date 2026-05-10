@@ -14,7 +14,7 @@ function adminAuthSecurity(req, res, next) {
     if (err) return next(err);
     adminAuthLimiter(req, res, next);
   });
-}
+}   
 
 function publicNewsletterLimit(req, res, next) {
   if (!req.path.startsWith("/api/v1/public/newsletter")) return next();
