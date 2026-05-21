@@ -67,23 +67,82 @@ router.get(
       await Promise.all([
         prisma.blog.findMany({
           where: { status: "published", showInBlog: true },
-          select: mixedFeedFields,
+          select: {
+            ...mixedFeedFields,
+            createdBy: {
+              select: {
+                id: true,
+                name: true,
+                avatarUrl: true,
+                bio: true,
+                // add other fields as needed
+              },
+            },
+          },
         }),
         prisma.casinoArticle.findMany({
           where: { status: "published", showInBlog: true },
-          select: mixedFeedFields,
+          select: {
+            ...mixedFeedFields,
+            createdBy: {
+              select: {
+                id: true,
+                name: true,
+
+                avatarUrl: true,
+                bio: true,
+                // add other fields as needed
+              },
+            },
+          },
         }),
         prisma.gameArticle.findMany({
           where: { status: "published", showInBlog: true },
-          select: mixedFeedFields,
+          select: {
+            ...mixedFeedFields,
+            createdBy: {
+              select: {
+                id: true,
+                name: true,
+
+                avatarUrl: true,
+                bio: true,
+                // add other fields as needed
+              },
+            },
+          },
         }),
         prisma.bonusArticle.findMany({
           where: { status: "published", showInBlog: true },
-          select: mixedFeedFields,
+          select: {
+            ...mixedFeedFields,
+            createdBy: {
+              select: {
+                id: true,
+                name: true,
+
+                avatarUrl: true,
+                bio: true,
+                // add other fields as needed
+              },
+            },
+          },
         }),
         prisma.news.findMany({
           where: { status: "published", showInBlog: true },
-          select: mixedFeedFields,
+          select: {
+            ...mixedFeedFields,
+            createdBy: {
+              select: {
+                id: true,
+                name: true,
+
+                avatarUrl: true,
+                bio: true,
+                // add other fields as needed
+              },
+            },
+          },
         }),
       ]);
 
@@ -92,29 +151,64 @@ router.get(
         ...item,
         contentType: "blog",
         href: `/blog/${item.slug}`,
+        author: item.createdBy
+          ? {
+              name: item.createdBy.name,
+              image: item.createdBy.avatarUrl,
+              description: item.createdBy.bio,
+            }
+          : undefined,
       })),
       ...casinoArticles.map((item) => ({
         ...item,
         contentType: "casino-article",
         href: `/casino-articles/${item.slug}`,
+        author: item.createdBy
+          ? {
+              name: item.createdBy.name,
+              image: item.createdBy.avatarUrl,
+              description: item.createdBy.bio,
+            }
+          : undefined,
       })),
       ...gameArticles.map((item) => ({
         ...item,
         contentType: "game-article",
         href: `/game-articles/${item.slug}`,
+        author: item.createdBy
+          ? {
+              name: item.createdBy.name,
+              image: item.createdBy.avatarUrl,
+              description: item.createdBy.bio,
+            }
+          : undefined,
       })),
       ...bonusArticles.map((item) => ({
         ...item,
         contentType: "bonus-article",
         href: `/bonus-articles/${item.slug}`,
+        author: item.createdBy
+          ? {
+              name: item.createdBy.name,
+              image: item.createdBy.avatarUrl,
+              description: item.createdBy.bio,
+            }
+          : undefined,
       })),
       ...news.map((item) => ({
         ...item,
         contentType: "news",
         href: `/news/${item.slug}`,
+        author: item.createdBy
+          ? {
+              name: item.createdBy.name,
+              image: item.createdBy.avatarUrl,
+              description: item.createdBy.bio,
+            }
+          : undefined,
       })),
     ].sort(compareByPublishDateDesc);
-
+    console.log("Merged content count:", merged);
     return ok(res, paginate(merged, page, limit));
   }),
 );
